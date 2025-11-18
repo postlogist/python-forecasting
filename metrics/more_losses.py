@@ -12,7 +12,8 @@ try:
 except (ImportError, AttributeError):  # pragma: no cover - fallback for standalone usage
 
     def _get_group_cols(df: IntoDataFrameT, id_col: str, cutoff_col: str) -> list[str]:
-        if getattr(df, "columns", None) and cutoff_col in df.columns:
+        columns = getattr(df, "columns", None)
+        if columns is not None and cutoff_col in columns:
             group_cols = [cutoff_col, id_col]
         else:
             group_cols = [id_col]
