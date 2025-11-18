@@ -2,12 +2,45 @@
 
 __all__ = ["WAPE", "BIAS"]
 
-from typing import List
+from typing import Callable, List
 
 import narwhals.stable.v2 as nw
 from narwhals.stable.v2.typing import IntoDataFrameT
 
-from utilsforecast.losses import _base_docstring, _get_group_cols, _zero_to_nan
+try:
+    from utilsforecast.losses import _base_docstring, _get_group_cols, _zero_to_nan
+except (ImportError, AttributeError):  # pragma: no cover - fallback for standalone usage
+
+    def _get_group_cols(df: IntoDataFrameT, id_col: str, cutoff_col: str) -> list[str]:
+        if getattr(df, "columns", None) and cutoff_col in df.columns:
+            group_cols = [cutoff_col, id_col]
+        else:
+            group_cols = [id_col]
+        return group_cols
+
+    def _base_docstring(*args, **kwargs) -> Callable:
+        base_docstring = """
+
+        Args:
+            df (pandas or polars DataFrame): Input dataframe with id, actual values and predictions.
+            models (list of str): Columns that identify the models predictions.
+            id_col (str, optional): Column that identifies each serie. Defaults to 'unique_id'.
+            target_col (str, optional): Column that contains the target. Defaults to 'y'.
+            cutoff_col (str, optional): Column that identifies the cutoff point for each forecast cross-validation fold. Defaults to 'cutoff'.
+
+        Returns:
+            pandas or polars DataFrame: dataframe with one row per id and one column per model.
+        """
+
+        def docstring_decorator(f: Callable):
+            if f.__doc__ is not None:
+                f.__doc__ += base_docstring
+            return f
+
+        return docstring_decorator(*args, **kwargs)
+
+    def _zero_to_nan(series):
+        return nw.when(series == 0).then(float("nan")).otherwise(series)
 
 
 def _ratio_metric(
